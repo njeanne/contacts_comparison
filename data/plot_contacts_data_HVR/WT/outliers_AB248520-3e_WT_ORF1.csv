@@ -1,0 +1,3 @@
+residues in contact,ROI partner position,ROI partner residue,ROI partner domain,second partner position,second partner residue,second partner domain,median contacts distance,number atoms contacts,atoms contacts,atoms contacts distances,ROI partner types
+791ARG_851GLU,791,ARG,HVR,851,GLU,Macro Domain nsP3,2.0548208386633493,2,GLU851_OE1-ARG791_NH2-HH21 | GLU851_OE2-ARG791_NH2-HH21,2.0410395706091635 | 2.068602106717535,acceptor | acceptor
+801THR_818SER,801,THR,HVR,818,SER,Macro Domain nsP3,2.259778298902901,1,THR801_O-SER818_N-H,2.259778298902901,donor

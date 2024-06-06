@@ -1,0 +1,6 @@
+residues in contact,ROI partner position,ROI partner residue,ROI partner domain,second partner position,second partner residue,second partner domain,median contacts distance,number atoms contacts,atoms contacts,atoms contacts distances,ROI partner types
+718GLU_703ARG,718,GLU,HVR,703,ARG,between Metal Binding Domain nsP2 and HVR,2.0972859034346647,2,GLU718_OE1-ARG703_NE-HE | GLU718_OE2-ARG703_NE-HE,2.1568829233384808 | 2.0376888835308486,donor | donor
+719ALA_685GLY,719,ALA,HVR,685,GLY,Metal Binding Domain nsP2,2.294276450856103,1,ALA719_O-GLY685_N-H,2.294276450856103,donor
+725THR_685GLY,725,THR,HVR,685,GLY,Metal Binding Domain nsP2,2.0721606477510144,1,GLY685_O-THR725_N-H,2.0721606477510144,acceptor
+726PRO_573ARG,726,PRO,HVR,573,ARG,Metal Binding Domain nsP2,1.8758749437822924,1,PRO726_O-ARG573_NH1-HH11,1.8758749437822924,donor
+788THR_805SER,788,THR,HVR,805,SER,Macro Domain nsP3,2.119711246038854,1,THR788_OG1-SER805_N-H,2.119711246038854,donor
