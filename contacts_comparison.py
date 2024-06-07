@@ -16,6 +16,7 @@ import re
 import sys
 
 from Bio import AlignIO
+from pymsaviz import MsaViz, get_msa_testdata
 import pandas as pd
 
 
@@ -51,7 +52,7 @@ def create_log(path, level):
     return logging
 
 
-def match_aligned_positions_with_original(aln_path):
+def match_aligned_positions_with_original(aln):
     """
     From an alignment, match the position alignment with the position of the residue in the original sequence.
     A dictionary is created with the following structure:
@@ -64,14 +65,13 @@ def match_aligned_positions_with_original(aln_path):
             residue: <RESIDUE>
         ...
 
-    :param aln_path: the path to the alignment (fasta format)
-    :type aln_path: str
+    :param aln: the alignment.
+    :type aln: Bio.Align.MultipleSeqAlignment
     :return: the match between the original position and the aligned position.
     :rtype: dict
     """
     logging.info("get the corresponding positions between the sequences of the alignment and the original ones.")
     data = {}
-    aln = AlignIO.read(aln_path, "fasta")
     for record in aln:
         data[record.id] = {}
         aln_seq = record.seq
@@ -80,6 +80,81 @@ def match_aligned_positions_with_original(aln_path):
             original_index = len(aln_seq[:index]) - gaps
             data[record.id][original_index + 1] = {"aligned position": index + 1, "residue": aln_seq[index]}
     return data
+
+
+def get_domains(domains_file_path, aln, data_whole_positions):
+    """
+    Extract the domains and update the positions with the ones of the alignment.
+
+    :param domains_file_path: the path to the protein domains CSV file.
+    :type domains_file_path: str
+    :param aln: the alignment.
+    :type aln: Bio.Align.MultipleSeqAlignment
+    :param data_whole_positions: the match between the original position and the aligned position.
+    :type data_whole_positions: dict
+    :return: the domains' coordinates.
+    :rtype: panddas.DataFrame
+    """
+    logging.info(f"extracting the domains positions from the domains file:")
+    data = {"domain": [], "start": [], "end": []}
+
+    # getting the length of the original sequence from the sequence in the alignment
+    seq_length = None
+    pattern = re.compile("(.+)_domains.csv")
+    match = pattern.search(os.path.basename(domains_file_path))
+    if match:
+        smp = match.group(1)
+    else:
+        logging.error(f"\tno match in the file name \"{os.path.basename(domains_file_path)}\" and the pattern "
+                      f"\"{pattern.pattern}\".")
+        sys.exit(1)
+    for record in aln:
+        if record.id == smp:
+            seq_length = len(record.seq.replace("-", ""))
+            break
+    if not seq_length:
+        logging.error(f"\tthe sequence \"{smp}\" from the domains file was not found in the sequences of the "
+                      f"alignment.")
+        sys.exit(1)
+
+    df = pd.read_csv(domains_file_path, sep=",")
+    previous_position = 0
+    previous_domain = None
+    idx = None
+    row = None
+    for idx, row in df.iterrows():
+        if idx == 0 and row["start"] != 1:
+            # the first domain is not starting at position 1
+            # record the before domain
+            data["domain"].append(f"before {row['domain']}")
+            data["start"].append(1)
+            data["end"].append(row["start"] - 1)
+        elif row["start"] - 1 != previous_position:
+            # the domains are not just one after the other and the domain
+            # record between the domain
+            data["domain"].append(f"between_{previous_domain}_and_{row['domain']}")
+            data["start"].append(previous_position + 1)
+            data["end"].append(row["start"] - 1)
+        # record the domain
+        data["domain"].append(row["domain"])
+        data["start"].append(row["start"])
+        data["end"].append(row["end"])
+        previous_position = row["end"]
+        previous_domain = row["domain"]
+
+    if idx == len(df) - 1 and row["end"] < seq_length:
+        # after the last domain
+        data["domain"].append(f"after_{row['domain']}")
+        data["start"].append(previous_position + 1)
+        data["end"].append(seq_length)
+
+    df_domains = pd.DataFrame.from_dict(data)
+    for idx, row in df_domains.iterrows():
+        df_domains.at[idx, "start"] = data_whole_positions[smp][row["start"]]["aligned position"]
+        df_domains.at[idx, "end"] = data_whole_positions[smp][row["end"]]["aligned position"]
+    logging.info("\tdomains updated.")
+
+    return df_domains
 
 
 def get_contact_file_paths_by_condition(path):
@@ -162,13 +237,13 @@ def get_differences(data, condition_1, condition_2, nb_smp_cond_1, output_dir, r
     :type condition_1: str
     :param condition_2: the second condition.
     :type condition_2: str
-    :param nb_smp_cond_1: the number of residues in contacts for the  first condition.
+    :param nb_smp_cond_1: the number of residues in contacts for the first condition.
     :type nb_smp_cond_1: int
     :param output_dir: the path to the output directory.
     :type output_dir: str
-    :param roi: the region of interest making contacts.
+    :param roi: the region making contacts with the others.
     :type roi: str
-    :return: the contact in the first condition that are not in the second condition.
+    :return: the contacts in the first condition that are not in the second condition.
     :rtype: pandas.DataFrame
     """
     difference_keys = sorted(list(set(list(data[condition_1].keys())) - set(list(data[condition_2].keys()))))
@@ -189,6 +264,7 @@ def get_differences(data, condition_1, condition_2, nb_smp_cond_1, output_dir, r
                 original_contacts = f"{data[condition_1][aln_diff_pos]['original'][smp]['position']}:{smp}"
         differences_dict["original positions"].append(original_contacts)
     df = pd.DataFrame.from_dict(differences_dict)
+    os.makedirs(output_dir, exist_ok=True)
     out_path = os.path.join(output_dir, f"{roi}_{condition_1}_not_in_{condition_2}.csv")
     df.to_csv(out_path, sep=",", index=False)
     logging.info(f"\t\t- {len(df)} contact{'s' if len(df) > 1 else ''} in {condition_1} not in {condition_2}: "
@@ -197,38 +273,59 @@ def get_differences(data, condition_1, condition_2, nb_smp_cond_1, output_dir, r
 
 
 def get_commons(data, condition_1, condition_2, nb_smp_cond_1, nb_smp_cond_2, output_dir, roi):
+    """
+    Get the common contacts positions between two conditions.
+
+    :param data: the whole contact positions.
+    :type data: dict
+    :param condition_1: the first condition.
+    :type condition_1: str
+    :param condition_2: the second condition.
+    :type condition_2: str
+    :param nb_smp_cond_1: the number of residues in contacts for the first condition.
+    :type nb_smp_cond_1: int
+    :param nb_smp_cond_2: the number of residues in contacts for the second condition.
+    :type nb_smp_cond_2: int
+    :param output_dir: the path to the output directory.
+    :type output_dir: str
+    :param roi: the region making contacts with the others.
+    :type roi: str
+    :return: the contacts in the first condition that are in common with the second condition.
+    :rtype: pandas.DataFrame
+    """
     common_keys = sorted(list(set(list(data[condition_1].keys())).intersection(list(data[condition_2].keys()))))
     commons_dict = {"position alignment": [], "number of contacts": [], "domain": [],
                     f"number of {condition_1} samples with contacts": [], f"number of samples {condition_1}": [],
                     f"number of {condition_2} samples with contacts": [], f"number of samples {condition_2}": [],
                     f"original positions {condition_1}": [], f"original positions {condition_2}": []}
-    for aln_diff_pos in common_keys:
-        commons_dict["position alignment"].append(aln_diff_pos)
-        commons_dict["number of contacts"].append(data[condition_1][aln_diff_pos]["count"])
-        commons_dict["domain"].append(data[condition_1][aln_diff_pos]["domain"])
+    for aln_comm_pos in common_keys:
+        commons_dict["position alignment"].append(aln_comm_pos)
+        commons_dict["number of contacts"].append(data[condition_1][aln_comm_pos]["count"])
+        commons_dict["domain"].append(data[condition_1][aln_comm_pos]["domain"])
         commons_dict[f"number of {condition_1} samples with contacts"].append(
-            len(data[condition_1][aln_diff_pos]["original"]))
+            len(data[condition_1][aln_comm_pos]["original"]))
         commons_dict[f"number of samples {condition_1}"].append(nb_smp_cond_1)
         original_contacts_cond1 = None
-        for smp in data[condition_1][aln_diff_pos]["original"]:
+        for smp in data[condition_1][aln_comm_pos]["original"]:
             if original_contacts_cond1:
                 original_contacts_cond1 = (f"{original_contacts_cond1} | "
-                                           f"{data[condition_1][aln_diff_pos]['original'][smp]['position']}:{smp}")
+                                           f"{data[condition_1][aln_comm_pos]['original'][smp]['position']}:{smp}")
             else:
-                original_contacts = f"{data[condition_1][aln_diff_pos]['original'][smp]['position']}:{smp}"
+                original_contacts_cond1 = f"{data[condition_1][aln_comm_pos]['original'][smp]['position']}:{smp}"
         commons_dict[f"original positions {condition_1}"].append(original_contacts_cond1)
         commons_dict[f"number of {condition_2} samples with contacts"].append(
-            len(data[condition_2][aln_diff_pos]["original"]))
+            len(data[condition_2][aln_comm_pos]["original"]))
         commons_dict[f"number of samples {condition_2}"].append(nb_smp_cond_2)
         original_contacts_cond2 = None
-        for smp in data[condition_2][aln_diff_pos]["original"]:
+        for smp in data[condition_2][aln_comm_pos]["original"]:
             if original_contacts_cond2:
-                original_contacts = (f"{original_contacts_cond2} | "
-                                     f"{data[condition_2][aln_diff_pos]['original'][smp]['position']}:{smp}")
+                original_contacts_cond2 = (f"{original_contacts_cond2} | "
+                                     f"{data[condition_2][aln_comm_pos]['original'][smp]['position']}:{smp}")
             else:
-                original_contacts = f"{data[condition_2][aln_diff_pos]['original'][smp]['position']}:{smp}"
+                original_contacts_cond2 = f"{data[condition_2][aln_comm_pos]['original'][smp]['position']}:{smp}"
         commons_dict[f"original positions {condition_2}"].append(original_contacts_cond2)
     df = pd.DataFrame.from_dict(commons_dict)
+    os.makedirs(output_dir, exist_ok=True)
     out_path = os.path.join(output_dir, f"{roi}_{condition_1}_in_{condition_2}.csv")
     df.to_csv(out_path, sep=",", index=False)
     logging.info(f"\t\t- {len(df)} contact{'s' if len(df) > 1 else ''} in {condition_1} and in {condition_2}: "
@@ -245,25 +342,53 @@ def compare_contacts_by_condition(data_whole_contacts, out_dir, data_files_by_co
     :type out_dir: str
     :param data_files_by_condition: the samples and paths by condition.
     :type data_files_by_condition: dict
+    :param region_of_interest: the region making contacts with the others.
+    :type region_of_interest: str
     :return: the different and common contacts positions.
     :rtype: dict
     """
-    logging.info("get the differences and common positions between the conditions:")
+    logging.info("get the different and common positions between the conditions:")
     out_data = {}
     for idx_1 in range(len(data_whole_contacts.keys()) - 1):
         cond_1 = list(data_whole_contacts.keys())[idx_1]
         nb_smp_condition_1 = len(data_files_by_condition[cond_1])
         for idx_2 in range(idx_1 + 1, len(data_whole_contacts.keys())):
             cond_2 = list(data_whole_contacts.keys())[idx_2]
-            comparison = f"{cond_1} vs. {cond_2}"
-            logging.info(f"\t{comparison}:")
+            versus = f"{cond_1} vs. {cond_2}"
+            logging.info(f"\t{versus}:")
             df_differences = get_differences(data_whole_contacts, cond_1, cond_2, len(data_files_by_condition[cond_1]),
-                                             out_dir, region_of_interest)
+                                             os.path.join(out_dir, "differences",
+                                                          versus.replace(" vs.", "_vs_")),
+                                             region_of_interest)
             df_commons = get_commons(data_whole_contacts, cond_1, cond_2, nb_smp_condition_1,
-                                     len(data_files_by_condition[cond_2]), out_dir, region_of_interest)
-            out_data[comparison] = {"differences": df_differences, "commons": df_commons}
+                                     len(data_files_by_condition[cond_2]),
+                                     os.path.join(out_dir, "commons", versus.replace(" vs.", "_vs_")),
+                                     region_of_interest)
+            out_data[versus] = {"differences": df_differences, "commons": df_commons}
     return out_data
 
+
+def plot_msa(msa_file, data, domains, out_dir):
+    logging.info("plotting the alignments:")
+    print(data)
+    for versus in data:
+        for comparison in data[versus]:
+            comparison_versus_dir = os.path.join(out_dir, comparison, versus.replace(" vs.", "_vs_"))
+            logging.info(f"\t- {versus}")
+            for _, row in domains.iterrows():
+                out = os.path.join(comparison_versus_dir, f"msa_plot_{row['domain'].replace(' ', '_')}.svg")
+                mv = MsaViz(msa_file, start=row["start"], end=row["end"], wrap_length=60, show_consensus=False)
+    # mv.add_markers([1])
+    # mv.add_markers([10, 20], color="orange", marker="o")
+    # mv.add_markers([30, (40, 50), 55], color="green", marker="+")
+    # mv.add_markers(pos_ident_less_than_50, marker="x", color="blue")
+    # # Add text annotations
+    # mv.add_text_annotation((76, 102), "Gap Region", text_color="red", range_color="red")
+    # mv.add_text_annotation((112, 123), "Gap Region", text_color="green", range_color="green")
+
+
+                mv.savefig(out)
+                logging.info(f"\t\t- {row['domain']} alignment plot saved: {out}")
 
 
 
@@ -286,6 +411,11 @@ if __name__ == "__main__":
                         help="the region of interest making contacts with other domains.")
     parser.add_argument("-a", "--aln", required=True, type=str,
                         help="the path to the alignment file (fasta format).")
+    parser.add_argument("-d", "--domains", required=True, type=str,
+                        help="a sample CSV domains annotation file for one of the sequences of the alignment. The file "
+                             "name must be <SAMPLE>_domain.csv with <SAMPLE> matching exactly the sequence name in the "
+                             "alignment. The file must contain 3 comma separated columns: domain, start and end. The "
+                             "start and end position for each domain must be 1 indexed.")
     parser.add_argument("-t", "--md-time", required=True, type=int,
                         help="the molecular dynamics duration in nanoseconds.")
     parser.add_argument("-l", "--log", required=False, type=str,
@@ -313,15 +443,13 @@ if __name__ == "__main__":
     logging.info(f"version: {__version__}")
     logging.info(f"CMD: {' '.join(sys.argv)}")
 
-    positions_original_alignment = match_aligned_positions_with_original(args.aln)
+    msa = AlignIO.read(args.aln, "fasta")
+
+    positions_original_alignment = match_aligned_positions_with_original(msa)
+    updated_domains = get_domains(args.domains, msa, positions_original_alignment)
     conditions_samples_paths = get_contact_file_paths_by_condition(args.input)
     whole_contacts_by_condition = get_whole_contact_positions(conditions_samples_paths, positions_original_alignment)
-
-    # for k, v in whole_contacts_by_condition.items():
-    #     print(f"{k}:")
-    #     sorted_v = dict(sorted(v.items()))
-    #     for k1, v1 in sorted_v.items():
-    #         print(f"\t{k1}: {v1}")
-
     differences_commons = compare_contacts_by_condition(whole_contacts_by_condition, args.out,
                                                         conditions_samples_paths, args.roi)
+    plot_msa(args.aln, differences_commons, updated_domains, args.out)
+    
