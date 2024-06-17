@@ -13,9 +13,11 @@ import argparse
 import logging
 import os
 import re
+import shutil
 import sys
 
 from Bio import AlignIO
+from Bio.Align import MultipleSeqAlignment
 from pymsaviz import MsaViz, get_msa_testdata
 import pandas as pd
 
@@ -265,11 +267,10 @@ def get_differences(data, condition_1, condition_2, nb_smp_cond_1, output_dir, r
         differences_dict["original positions"].append(original_contacts)
     df = pd.DataFrame.from_dict(differences_dict)
     os.makedirs(output_dir, exist_ok=True)
-    out_path = os.path.join(output_dir, f"{roi}_{condition_1}_not_in_{condition_2}.csv")
+    out_path = os.path.join(output_dir, f"different_contacts_for_{roi}_{condition_1}_vs_{condition_2}.csv")
     df.to_csv(out_path, sep=",", index=False)
     logging.info(f"\t\t- {len(df)} contact{'s' if len(df) > 1 else ''} in {condition_1} not in {condition_2}: "
                  f"{out_path}")
-    return df
 
 
 def get_commons(data, condition_1, condition_2, nb_smp_cond_1, nb_smp_cond_2, output_dir, roi):
@@ -326,11 +327,10 @@ def get_commons(data, condition_1, condition_2, nb_smp_cond_1, nb_smp_cond_2, ou
         commons_dict[f"original positions {condition_2}"].append(original_contacts_cond2)
     df = pd.DataFrame.from_dict(commons_dict)
     os.makedirs(output_dir, exist_ok=True)
-    out_path = os.path.join(output_dir, f"{roi}_{condition_1}_in_{condition_2}.csv")
+    out_path = os.path.join(output_dir, f"common_contacts_for_{roi}_{condition_1}_vs_{condition_2}.csv")
     df.to_csv(out_path, sep=",", index=False)
     logging.info(f"\t\t- {len(df)} contact{'s' if len(df) > 1 else ''} in {condition_1} and in {condition_2}: "
                  f"{out_path}")
-    return df
 
 
 def compare_contacts_by_condition(data_whole_contacts, out_dir, data_files_by_condition, region_of_interest):
@@ -348,7 +348,6 @@ def compare_contacts_by_condition(data_whole_contacts, out_dir, data_files_by_co
     :rtype: dict
     """
     logging.info("get the different and common positions between the conditions:")
-    out_data = {}
     for idx_1 in range(len(data_whole_contacts.keys()) - 1):
         cond_1 = list(data_whole_contacts.keys())[idx_1]
         nb_smp_condition_1 = len(data_files_by_condition[cond_1])
@@ -356,40 +355,78 @@ def compare_contacts_by_condition(data_whole_contacts, out_dir, data_files_by_co
             cond_2 = list(data_whole_contacts.keys())[idx_2]
             versus = f"{cond_1} vs. {cond_2}"
             logging.info(f"\t{versus}:")
-            df_differences = get_differences(data_whole_contacts, cond_1, cond_2, len(data_files_by_condition[cond_1]),
-                                             os.path.join(out_dir, "differences",
-                                                          versus.replace(" vs.", "_vs_")),
-                                             region_of_interest)
-            df_commons = get_commons(data_whole_contacts, cond_1, cond_2, nb_smp_condition_1,
-                                     len(data_files_by_condition[cond_2]),
-                                     os.path.join(out_dir, "commons", versus.replace(" vs.", "_vs_")),
-                                     region_of_interest)
-            out_data[versus] = {"differences": df_differences, "commons": df_commons}
-    return out_data
+            get_differences(data_whole_contacts, cond_1, cond_2, len(data_files_by_condition[cond_1]),
+                            os.path.join(out_dir, f"{cond_1}_vs_{cond_2}"), region_of_interest)
+            get_commons(data_whole_contacts, cond_1, cond_2, nb_smp_condition_1, len(data_files_by_condition[cond_2]),
+                        os.path.join(out_dir, f"{cond_1}_vs_{cond_2}"), region_of_interest)
 
 
-def plot_msa(msa_file, data, domains, out_dir):
-    logging.info("plotting the alignments:")
-    print(data)
-    for versus in data:
-        for comparison in data[versus]:
-            comparison_versus_dir = os.path.join(out_dir, comparison, versus.replace(" vs.", "_vs_"))
-            logging.info(f"\t- {versus}")
+def subsample_msa(whole_msa, dict_samples, conditions_ids, tmp_directory):
+    """
+    Sample the MSA based on the samples present in the studied conditions.
+
+    :param whole_msa: the MSA with all the samples.
+    :type whole_msa: Bio.Align.MultipleSeqAlignment
+    :param dict_samples: the dictionary with samples' names by condition.
+    :type dict_samples: dict
+    :param conditions_ids: the two conditions that are compared.
+    :param tmp_directory: str
+    :return: the path to the sub-sampled alignment.
+    :rtype: str
+    """
+    conditions = conditions_ids.split("_vs_")
+    samples_to_keep = []
+    for condition in conditions:
+        samples_to_keep = samples_to_keep + list(dict_samples[condition].keys())
+    new_msa = MultipleSeqAlignment([])
+    for record in whole_msa:
+        if record.id in samples_to_keep:
+            new_msa.append(record)
+    path_tmp = os.path.join(tmp_directory, f"aln_{'_'.join(conditions)}.fa")
+    AlignIO.write(new_msa, path_tmp, "fasta")
+    return path_tmp
+
+
+def plot_msa(aln, region_of_interest, data_samples, domains, out_dir):
+    """
+    For two conditions, plot the Multiple Sequences Alignment with annotations of number of contacts.
+
+    :param aln: the MSA.
+    :type aln: Bio.Align.MultipleSeqAlignment
+    :param region_of_interest: the region making contacts with the others.
+    :type region_of_interest: str
+    :param data_samples: the samples by condition.
+    :type data_samples: dict
+    :param domains: the domains' information.
+    :type domains: pandas.core.frame.DataFrame
+    :param out_dir: the path to the output directory.
+    :type out_dir: str
+    """
+    logging.info("plotting the alignments with the contacts annotations:")
+    tmp_dir = os.path.join(out_dir, "tmp")
+    os.makedirs(tmp_dir, exist_ok=True)
+    for versus in os.listdir(out_dir):
+        if os.path.isdir(os.path.join(out_dir, versus)) and versus != "tmp":
+            logging.info(f"\t- {versus.replace('_vs_', ' vs. ')}:")
+            versus_msa_file = subsample_msa(aln, data_samples, versus, tmp_dir)
             for _, row in domains.iterrows():
-                out = os.path.join(comparison_versus_dir, f"msa_plot_{row['domain'].replace(' ', '_')}.svg")
-                mv = MsaViz(msa_file, start=row["start"], end=row["end"], wrap_length=60, show_consensus=False)
-    # mv.add_markers([1])
-    # mv.add_markers([10, 20], color="orange", marker="o")
-    # mv.add_markers([30, (40, 50), 55], color="green", marker="+")
-    # mv.add_markers(pos_ident_less_than_50, marker="x", color="blue")
-    # # Add text annotations
-    # mv.add_text_annotation((76, 102), "Gap Region", text_color="red", range_color="red")
-    # mv.add_text_annotation((112, 123), "Gap Region", text_color="green", range_color="green")
-
-
-                mv.savefig(out)
+                msa_viz = MsaViz(versus_msa_file, start=row["start"], end=row["end"], wrap_length=60,
+                                 show_consensus=False)
+                for comparison in ["common", "different"]:
+                    if comparison == "common":
+                        annotations_color = "blue"
+                    else:
+                        annotations_color = "red"
+                    df = pd.read_csv(os.path.join(out_dir, versus,
+                                                  f"{comparison}_contacts_for_{region_of_interest}_{versus}.csv"))
+                    df_by_domain = df.loc[df["domain"] == row["domain"]]
+                    for _, row_in_domain in df_by_domain.iterrows():
+                        msa_viz.add_markers([row_in_domain["position alignment"]], color=annotations_color,
+                                            marker=f"${row_in_domain['number of contacts']}$")
+                out = os.path.join(out_dir, versus, f"msa_plot_{versus}_{row['domain'].replace(' ', '_')}.svg")
+                msa_viz.savefig(out)
                 logging.info(f"\t\t- {row['domain']} alignment plot saved: {out}")
-
+    shutil.rmtree(tmp_dir)
 
 
 if __name__ == "__main__":
@@ -449,7 +486,5 @@ if __name__ == "__main__":
     updated_domains = get_domains(args.domains, msa, positions_original_alignment)
     conditions_samples_paths = get_contact_file_paths_by_condition(args.input)
     whole_contacts_by_condition = get_whole_contact_positions(conditions_samples_paths, positions_original_alignment)
-    differences_commons = compare_contacts_by_condition(whole_contacts_by_condition, args.out,
-                                                        conditions_samples_paths, args.roi)
-    plot_msa(args.aln, differences_commons, updated_domains, args.out)
-    
+    compare_contacts_by_condition(whole_contacts_by_condition, args.out, conditions_samples_paths, args.roi)
+    plot_msa(msa, args.roi, conditions_samples_paths, updated_domains, args.out)
