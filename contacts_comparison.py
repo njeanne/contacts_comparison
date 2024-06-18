@@ -494,13 +494,6 @@ if __name__ == "__main__":
     positions_original_alignment = match_aligned_positions_with_original(msa)
     updated_domains = get_domains(args.domains, msa, positions_original_alignment)
     conditions_samples_paths = get_contact_file_paths_by_condition(args.input, args.group)
-
-    #todo: remove
-    for k, v in conditions_samples_paths.items():
-        print(f"{k}:")
-        for k1, v1 in v.items():
-            print(f'\t{k1}: {v1}')
-
     whole_contacts_by_condition = get_whole_contact_positions(conditions_samples_paths, positions_original_alignment)
     compare_contacts_by_condition(whole_contacts_by_condition, args.out, conditions_samples_paths, args.roi)
     plot_msa(msa, args.roi, conditions_samples_paths, updated_domains, args.out)
