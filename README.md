@@ -1,4 +1,4 @@
-# contacts_comparison
+# Contacts comparison between conditions
 
 For two conditions, from the CSV files describing the amino acids contacts between a Region of Interest and the other 
 regions of a protein during a Molecular Dynamics simulation, the script will produce Multiple Sequences Alignments 
