@@ -159,12 +159,14 @@ def get_domains(domains_file_path, aln, data_whole_positions):
     return df_domains
 
 
-def get_contact_file_paths_by_condition(path):
+def get_contact_file_paths_by_condition(path, grouped):
     """
     By condition, get the sample names and the contact file paths.
 
     :param path: the CSV file path of the directory paths by condition.
     :type path: str
+    :param grouped: the grouped conditions.
+    :type grouped: list
     :return: the samples and paths by condition.
     :rtype: dict
     """
@@ -173,12 +175,16 @@ def get_contact_file_paths_by_condition(path):
     conditions_paths = pd.read_csv(path, sep=",", header=0)
     pattern_fn = re.compile("^outliers_(.+)\\.csv")
     for _, row in conditions_paths.iterrows():
-        data[row["condition"]] = {}
+        condition = row["condition"]
+        if grouped and condition in grouped:
+            condition = "-".join(grouped)
+        if not condition in data:
+            data[condition] = {}
         for fn in os.listdir(row["path"]):
             match = pattern_fn.search(fn)
             if match:
                 sample = match.group(1)
-                data[row["condition"]][sample]= os.path.join(row["path"], fn)
+                data[condition][sample]= os.path.join(row["path"], fn)
     for condition in data:
         logging.info(f"\t{condition}: {len(data[condition])} files")
     return data
@@ -455,6 +461,9 @@ if __name__ == "__main__":
                              "start and end position for each domain must be 1 indexed.")
     parser.add_argument("-t", "--md-time", required=True, type=int,
                         help="the molecular dynamics duration in nanoseconds.")
+    parser.add_argument("-g", "--group", required=False, nargs="+", type=str,
+                        help="a list of conditions, separated by spaces, to group as they appear in the first column "
+                             "of the input file.")
     parser.add_argument("-l", "--log", required=False, type=str,
                         help="the path for the log file. If this option is skipped, the log file is created in the "
                              "output directory.")
@@ -484,7 +493,14 @@ if __name__ == "__main__":
 
     positions_original_alignment = match_aligned_positions_with_original(msa)
     updated_domains = get_domains(args.domains, msa, positions_original_alignment)
-    conditions_samples_paths = get_contact_file_paths_by_condition(args.input)
+    conditions_samples_paths = get_contact_file_paths_by_condition(args.input, args.group)
+
+    #todo: remove
+    for k, v in conditions_samples_paths.items():
+        print(f"{k}:")
+        for k1, v1 in v.items():
+            print(f'\t{k1}: {v1}')
+
     whole_contacts_by_condition = get_whole_contact_positions(conditions_samples_paths, positions_original_alignment)
     compare_contacts_by_condition(whole_contacts_by_condition, args.out, conditions_samples_paths, args.roi)
     plot_msa(msa, args.roi, conditions_samples_paths, updated_domains, args.out)

@@ -48,6 +48,10 @@ conda activate contacts_comparison
 conda deactivate
 ```
 
+The option `--group` can be used
+to regroup under the same condition `ìnsertions` and `duplications` in the test dataset with the following synthax, 
+`--group insertions duplications`.
+
 
 ## Outputs
 
