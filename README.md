@@ -1,9 +1,15 @@
 # Contacts comparison between conditions
 
-For two conditions, from the CSV files describing the amino acids contacts between a Region of Interest and the other 
-regions of a protein during a Molecular Dynamics simulation, the script will produce Multiple Sequences Alignments 
-(MSA) annotated with the number of contacts.
-In red, the number of contacts that are different between the two conditions and in blue the common contacts.
+For each pair of conditions, from the CSV files describing the amino acids contacts between a Region of Interest 
+(**A**) and the other regions of a protein (**B**) during a Molecular Dynamics simulation, and focusing on the contact 
+position of **B** , the script will produce two CSV files, one for the common contacts positions between the two 
+conditions, and another one for the different contacts positions between the two conditions.
+
+Multiple Sequences Alignments (MSA) annotated with the number of contacts will also be produced for each region.
+The annotations on the MSA are the number of contacts.
+The numbers in <span style="color:red">red</span> are the count of contacts present in one condition but absents from 
+the other.
+The numbers in <span style="color:blue">blue</span> are the count of contacts present in both conditions.
 
 The input CSV data are produced by the [plot_contacts](https://github.com/njeanne/plot_contacts/tree/main) script.
 
@@ -55,9 +61,13 @@ to regroup under the same condition `ìnsertions` and `duplications` in the test
 
 ## Outputs
 
-The outputs are:
-- two CSV files by compared conditions, one for the common positions, one for the different positions.
-  An example of the different positions between the equences with insertions and the Wild types ones.
+One to one conditions that are compared, the outputs are:
+- two CSV files by compared conditions:
+  - one for the common contacts positions: `common_contacts_for_<REGION_OF_INTEREST>_<CONDITION_1>_vs_<CONDITION_2>.csv`
+  - one for the different contacts positions, the contacts present in `<CONDITION_1>` but not in `<CONDITION_2>`: `different_contacts_for_<REGION_OF_INTEREST>_<CONDITION_1>_vs_<CONDITION_2>.csv`
+  
+
+An example of the different positions between the sequences with insertions and the Wild types ones:
  
 |position alignment|number of contacts|domain                    |number of samples with contacts|number of samples|original positions                                |
 |------------------|------------------|--------------------------|-------------------------------|-----------------|--------------------------------------------------|
@@ -73,5 +83,7 @@ The outputs are:
 |1989              |1                 |after RdRp nsP5           |1                              |9                |1778:HEPAC-64_ZNF787_ORF1                         |
 
 - the annotated MSAs by domain with the contacts between the region of interest and the other domains.
-  The numbers of common contacts' positions are highlighted in blue and the number of different contacts' position in red.
+  The numbers of common contacts'
+  positions between the two conditions are highlighted in <span style="color:blue">blue</span>, and the numbers of different contacts'
+  positions between the two conditions are highlighted in <span style="color:red">red</span>.
   ![MSA](doc/_static/msa.svg)

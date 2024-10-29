@@ -7,7 +7,7 @@ Created on 05 Jun. 2024
 __author__ = "Nicolas JEANNE"
 __copyright__ = "GNU General Public License"
 __email__ = "jeanne.n@chu-toulouse.fr"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import argparse
 import logging
@@ -237,7 +237,7 @@ def get_whole_contact_positions(cond_smp_paths, data_whole_positions):
 
 def get_differences(data, condition_1, condition_2, nb_smp_cond_1, output_dir, roi):
     """
-    Get the contacts positions differences between two conditions.
+    Get the different contacts positions between the two compared conditions.
 
     :param data: the whole contact positions.
     :type data: dict
@@ -281,7 +281,7 @@ def get_differences(data, condition_1, condition_2, nb_smp_cond_1, output_dir, r
 
 def get_commons(data, condition_1, condition_2, nb_smp_cond_1, nb_smp_cond_2, output_dir, roi):
     """
-    Get the common contacts positions between two conditions.
+    Get the common contacts positions between two compared conditions.
 
     :param data: the whole contact positions.
     :type data: dict
@@ -341,7 +341,7 @@ def get_commons(data, condition_1, condition_2, nb_smp_cond_1, nb_smp_cond_2, ou
 
 def compare_contacts_by_condition(data_whole_contacts, out_dir, data_files_by_condition, region_of_interest):
     """
-    Search for contacts different and common positions between the conditions.
+    Search for common and different contacts positions between the two compared conditions.
     :param data_whole_contacts: the whole contact positions.
     :type data_whole_contacts: dict
     :param out_dir: the path to the output directory.
@@ -444,9 +444,17 @@ if __name__ == "__main__":
     {__copyright__}
 
     Distributed on an "AS IS" basis without warranties or conditions of any kind, either express or implied.
+    
+    For each pair of conditions, from the CSV files describing the amino acids contacts between a Region of Interest 
+    (A) and the other regions of a protein (B) during a Molecular Dynamics simulation, and focusing on the contact 
+    position of B, the script will produce two CSV files, one for the common contacts positions between the two 
+    conditions, and another one for the different contacts positions between the two conditions.
+    Multiple Sequences Alignments annotated with the number of contacts will also be produced for each region.
+    The annotations on the Multiple Sequences Alignments are the number of contacts.
+    The numbers in red are the count of contacts present in one condition but absents from the other.
+    The numbers in blue are the count of contacts present in both conditions.
 
-    Retrieve the common contacts between Molecular Dynamics simulations of various systems. The input files are the ones
-    from the plot_contacts.py script (https://github.com/njeanne/plot_contacts).
+    The input files are the output files from the plot_contacts.py script (https://github.com/njeanne/plot_contacts).
     """
     parser = argparse.ArgumentParser(description=descr, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-o", "--out", required=True, type=str, help="the path to the output directory.")
