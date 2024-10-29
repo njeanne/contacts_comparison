@@ -2,14 +2,18 @@
 
 For each pair of conditions, from the CSV files describing the amino acids contacts between a Region of Interest 
 (**A**) and the other regions of a protein (**B**) during a Molecular Dynamics simulation, and focusing on the contact 
-position of **B** , the script will produce two CSV files, one for the common contacts positions between the two 
-conditions, and another one for the different contacts positions between the two conditions.
+position of **B**, the script will produce three CSV files, one for the common contacts positions between the two 
+conditions, and another one for the different contacts positions between the condition 1 and condition 2 and the last 
+one for the different contacts positions between the condition 2 and condition 1.
 
-Multiple Sequences Alignments (MSA) annotated with the number of contacts will also be produced for each region.
+Two Multiple Sequences Alignments (MSA) annotated with the number of contacts will also be produced for each region.
 The annotations on the MSA are the number of contacts.
 The numbers in <span style="color:red">red</span> are the count of contacts present in one condition but absents from 
 the other.
 The numbers in <span style="color:blue">blue</span> are the count of contacts present in both conditions.
+The first MSA represents the common contacts positions and the different contact positions between condition 1 and 
+condition 2. The second MSA represents the common contacts positions and the different contact positions between 
+condition 2 and condition 1.
 
 The input CSV data are produced by the [plot_contacts](https://github.com/njeanne/plot_contacts/tree/main) script.
 
@@ -62,9 +66,10 @@ to regroup under the same condition `ìnsertions` and `duplications` in the test
 ## Outputs
 
 One to one conditions that are compared, the outputs are:
-- two CSV files by compared conditions:
-  - one for the common contacts positions: `common_contacts_for_<REGION_OF_INTEREST>_<CONDITION_1>_vs_<CONDITION_2>.csv`
-  - one for the different contacts positions, the contacts present in `<CONDITION_1>` but not in `<CONDITION_2>`: `different_contacts_for_<REGION_OF_INTEREST>_<CONDITION_1>_vs_<CONDITION_2>.csv`
+- three CSV files by domain and compared conditions:
+  - the common contacts positions: `common_contacts_for_<REGION_OF_INTEREST>_in_<CONDITION_1>_and_in_<CONDITION_2>.csv`
+  - the different contacts positions, the contacts present in `<CONDITION_1>` but not in `<CONDITION_2>`: `different_contacts_for_<REGION_OF_INTEREST>_in_<CONDITION_1>_not_in_<CONDITION_2>.csv`
+  - the different contacts positions, the contacts present in `<CONDITION_2>` but not in `<CONDITION_1>`: `different_contacts_for_<REGION_OF_INTEREST>_in_<CONDITION_2>_not_in_<CONDITION_1>.csv`
   
 
 An example of the different positions between the sequences with insertions and the Wild types ones:

@@ -483,12 +483,17 @@ if __name__ == "__main__":
     
     For each pair of conditions, from the CSV files describing the amino acids contacts between a Region of Interest 
     (A) and the other regions of a protein (B) during a Molecular Dynamics simulation, and focusing on the contact 
-    position of B, the script will produce two CSV files, one for the common contacts positions between the two 
-    conditions, and another one for the different contacts positions between the two conditions.
-    Multiple Sequences Alignments annotated with the number of contacts will also be produced for each region.
-    The annotations on the Multiple Sequences Alignments are the number of contacts.
+    position of B, the script will produce three CSV files, one for the common contacts positions between the two 
+    conditions, and another one for the different contacts positions between the condition 1 and condition 2 and the 
+    last one for the different contacts positions between the condition 2 and condition 1.
+    
+    Two Multiple Sequences Alignments (MSA) annotated with the number of contacts will also be produced for each region.
+    The annotations on the MSA are the number of contacts.
     The numbers in red are the count of contacts present in one condition but absents from the other.
     The numbers in blue are the count of contacts present in both conditions.
+    The first MSA represents the common contacts positions and the different contact positions between condition 1 and 
+    condition 2. The second MSA represents the common contacts positions and the different contact positions between 
+    condition 2 and condition 1.
 
     The input files are the output files from the plot_contacts.py script (https://github.com/njeanne/plot_contacts).
     """
