@@ -406,10 +406,15 @@ def subsample_msa(whole_msa, dict_samples, conditions_ids, tmp_directory):
     return path_tmp
 
 
-def plot_msa(aln, region_of_interest, data_samples, domains, out_dir):
+def plot_msas(aln, region_of_interest, data_samples, domains, out_dir):
     """
-    For two conditions, plot the Multiple Sequences Alignment with the number of contacts annotations and the Multiple
-    Sequences Alignment with the number of samples annotations.
+    For the conditions 1 and 2, plot 4 Multiple Sequences Alignment (MSA).
+    Two MSA are annotated with the number of atoms' contacts by alignment positions, and two other MSA are annotated with
+    the number of samples with residue in contact by position of the alignment.
+    Each of those two MSA, are "condition 1 versus condition 2" and "condition 2 versus condition 1".
+    The annotations in blue are common positions between condition 1 and condition 2,
+    and the red ones are different positions.
+
 
     :param aln: the MSA.
     :type aln: Bio.Align.MultipleSeqAlignment
@@ -507,14 +512,13 @@ if __name__ == "__main__":
     position of B, the script will produce three CSV files, one for the common contacts positions between the two 
     conditions, and another one for the different contacts positions between the condition 1 and condition 2 and the 
     last one for the different contacts positions between the condition 2 and condition 1.
-    
-    Two Multiple Sequences Alignments (MSA) annotated with the number of contacts will also be produced for each region.
-    The annotations on the MSA are the number of contacts.
-    The numbers in red are the count of contacts present in one condition but absents from the other.
-    The numbers in blue are the count of contacts present in both conditions.
-    The first MSA represents the common contacts positions and the different contact positions between condition 1 and 
-    condition 2. The second MSA represents the common contacts positions and the different contact positions between 
-    condition 2 and condition 1.
+
+    For each region, Multiple Sequences Alignments (MSA) annotated with the number of atoms' contacts by alignment 
+    position and MSA annotated with the number of samples' having a contact by alignment position are produced. The 
+    numbers in red are the count of contacts present in one condition but absents from the other. The numbers in blue 
+    are the count of contacts present in both conditions. The first MSA represents the common contacts positions and 
+    the different contact positions between condition 1 and condition 2. The second MSA represents the common contacts 
+    positions and the different contact positions between condition 2 and condition 1.
 
     The input files are the output files from the plot_contacts.py script (https://github.com/njeanne/plot_contacts).
     """
@@ -566,4 +570,4 @@ if __name__ == "__main__":
     conditions_samples_paths = get_contact_file_paths_by_condition(args.input, args.group)
     whole_contacts_by_condition = get_whole_contact_positions(conditions_samples_paths, positions_original_alignment)
     compare_contacts_by_condition(whole_contacts_by_condition, args.out, conditions_samples_paths, args.roi)
-    plot_msa(msa, args.roi, conditions_samples_paths, updated_domains, args.out)
+    plot_msas(msa, args.roi, conditions_samples_paths, updated_domains, args.out)

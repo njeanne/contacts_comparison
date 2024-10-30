@@ -6,8 +6,8 @@ position of **B**, the script will produce three CSV files, one for the common c
 conditions, and another one for the different contacts positions between the condition 1 and condition 2 and the last 
 one for the different contacts positions between the condition 2 and condition 1.
 
-Two Multiple Sequences Alignments (MSA) annotated with the number of contacts will also be produced for each region.
-The annotations on the MSA are the number of contacts.
+For each region, Multiple Sequences Alignments (MSA) annotated with the number of atoms' contacts by alignment position
+ and MSA annotated with the number of samples' having a contact by alignment position are produced.
 The numbers in <span style="color:red">red</span> are the count of contacts present in one condition but absents from 
 the other.
 The numbers in <span style="color:blue">blue</span> are the count of contacts present in both conditions.
@@ -87,8 +87,13 @@ An example of the different positions between the sequences with insertions and 
 |1988              |2                 |after RdRp nsP5           |1                              |9                |1777:HEPAC-64_ZNF787_ORF1                         |
 |1989              |1                 |after RdRp nsP5           |1                              |9                |1778:HEPAC-64_ZNF787_ORF1                         |
 
-- the annotated MSAs by domain with the contacts between the region of interest and the other domains.
-  The numbers of common contacts'
-  positions between the two conditions are highlighted in <span style="color:blue">blue</span>, and the numbers of different contacts'
-  positions between the two conditions are highlighted in <span style="color:red">red</span>.
+- the MSAs by domain annotated by:
+  - the atoms' contacts count by alignment position.
+  - the samples' count having a contact by alignment position.
+  
+
+  An example of an annotated MSA by atoms' contacts counts. The numbers of common contacts' positions between the two 
+  conditions are highlighted in <span style="color:blue">blue</span>, and the numbers of different contacts' positions 
+  between the two conditions are highlighted in <span style="color:red">red</span>:
+
   ![MSA](doc/_static/msa.svg)
