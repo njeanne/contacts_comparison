@@ -444,9 +444,9 @@ def plot_msa(aln, region_of_interest, data_samples, domains, out_dir):
                                       f"{condition1}.csv")
             diff_files.append(path_diff2)
             for _, row in domains.iterrows():
-                msa_viz = MsaViz(versus_msa_file, start=row["start"], end=row["end"], wrap_length=60,
-                                 show_consensus=False)
                 for idx in range(len(diff_files)):
+                    msa_viz = MsaViz(versus_msa_file, start=row["start"], end=row["end"], wrap_length=60,
+                                     show_consensus=False)
                     df = pd.read_csv(path_common)
                     annotations_color = "blue"
                     df_by_domain = df.loc[df["domain"] == row["domain"]]
