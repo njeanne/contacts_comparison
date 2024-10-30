@@ -408,7 +408,8 @@ def subsample_msa(whole_msa, dict_samples, conditions_ids, tmp_directory):
 
 def plot_msa(aln, region_of_interest, data_samples, domains, out_dir):
     """
-    For two conditions, plot the Multiple Sequences Alignment with annotations of number of contacts.
+    For two conditions, plot the Multiple Sequences Alignment with the number of contacts annotations and the Multiple
+    Sequences Alignment with the number of samples annotations.
 
     :param aln: the MSA.
     :type aln: Bio.Align.MultipleSeqAlignment
@@ -426,10 +427,14 @@ def plot_msa(aln, region_of_interest, data_samples, domains, out_dir):
     os.makedirs(tmp_dir, exist_ok=True)
     for versus in os.listdir(out_dir):
         if os.path.isdir(os.path.join(out_dir, versus)) and versus != "tmp":
+
+            msa_types = ["annotated_by_samples_count", "annotated_by_contacts_count"]
+            for msa_type in msa_types:
+                os.makedirs(os.path.join(out_dir, versus, f"msa_{msa_type}"), exist_ok=True)
+
             split_versus_dir = versus.split("_vs_")
             condition1 = split_versus_dir[0]
             condition2 = split_versus_dir[1]
-            logging.info(f"\t- {versus.replace('_vs_', ' vs. ')}:")
             versus_msa_file = subsample_msa(aln, data_samples, versus, tmp_dir)
             path_common = os.path.join(out_dir, versus,
                                        f"common_contacts_for_{region_of_interest}_in_{condition1}_and_in_"
@@ -443,31 +448,47 @@ def plot_msa(aln, region_of_interest, data_samples, domains, out_dir):
                                       f"different_contacts_for_{region_of_interest}_in_{condition2}_not_in_"
                                       f"{condition1}.csv")
             diff_files.append(path_diff2)
-            for _, row in domains.iterrows():
-                for idx in range(len(diff_files)):
-                    msa_viz = MsaViz(versus_msa_file, start=row["start"], end=row["end"], wrap_length=60,
-                                     show_consensus=False)
-                    df = pd.read_csv(path_common)
-                    annotations_color = "blue"
-                    df_by_domain = df.loc[df["domain"] == row["domain"]]
-                    for _, row_in_domain in df_by_domain.iterrows():
-                        msa_viz.add_markers([row_in_domain["position alignment"]], color=annotations_color,
-                                            marker=f"${row_in_domain['number of contacts']}$")
-                    df = pd.read_csv(diff_files[idx])
-                    annotations_color = "red"
-                    df_by_domain = df.loc[df["domain"] == row["domain"]]
-                    for _, row_in_domain in df_by_domain.iterrows():
-                        msa_viz.add_markers([row_in_domain["position alignment"]], color=annotations_color,
-                                            marker=f"${row_in_domain['number of contacts']}$")
-                    condition_a = condition1
-                    condition_b = condition2
-                    if idx == 1:
-                        condition_a = condition2
-                        condition_b = condition1
-                    out = os.path.join(out_dir, versus,
-                                       f"msa_plot_{condition_a}_vs_{condition_b}_{row['domain'].replace(' ', '_')}.svg")
-                    msa_viz.savefig(out)
-                    logging.info(f"\t\t- {row['domain']} ({condition_a} vs. {condition_b}) alignment plot saved: {out}")
+
+            for msa_type in msa_types:  # by contacts counts or by samples having contacts
+                logging.info(f"\t- {versus.replace('_vs_', ' vs. ')}, "
+                             f"MSA {msa_type.replace('_', ' ')}:")
+                for _, row in domains.iterrows():
+                    for idx in range(len(diff_files)):
+                        msa_viz = MsaViz(versus_msa_file, start=row["start"], end=row["end"], wrap_length=60,
+                                         show_consensus=False)
+                        # MSA annotation for the contacts in condition 1 and in condition 2
+                        df = pd.read_csv(path_common)
+                        annotations_color = "blue"
+                        df_by_domain = df.loc[df["domain"] == row["domain"]]
+                        for _, row_in_domain in df_by_domain.iterrows():
+                            if msa_type == "annotated_by_samples_count":
+                                marker = row_in_domain.iloc[3] + row_in_domain.iloc[5]
+                            else:
+                                marker = row_in_domain["number of contacts"]
+                            msa_viz.add_markers([row_in_domain["position alignment"]], color=annotations_color,
+                                                marker=f"${marker}$")
+
+                        # MSA annotation for the contacts in condition 1 not in condition 2
+                        df = pd.read_csv(diff_files[idx])
+                        annotations_color = "red"
+                        df_by_domain = df.loc[df["domain"] == row["domain"]]
+                        for _, row_in_domain in df_by_domain.iterrows():
+                            if msa_type == "annotated_by_samples_count":
+                                marker = row_in_domain["number of samples with contacts"]
+                            else:
+                                marker = row_in_domain["number of contacts"]
+                            msa_viz.add_markers([row_in_domain["position alignment"]], color=annotations_color,
+                                                marker=f"${marker}$")
+                        condition_a = condition1
+                        condition_b = condition2
+                        if idx == 1:
+                            condition_a = condition2
+                            condition_b = condition1
+                        out = os.path.join(out_dir, versus, f"msa_{msa_type}",
+                                           f"msa_{condition_a}_vs_{condition_b}_{row['domain'].replace(' ', '_')}_"
+                                           f"{msa_type}.svg")
+                        msa_viz.savefig(out)
+                        logging.info(f"\t\t- {row['domain']} ({condition_a} vs. {condition_b}) alignment plot saved: {out}")
     shutil.rmtree(tmp_dir)
 
 
