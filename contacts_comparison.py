@@ -463,7 +463,7 @@ def plot_msas(aln, region_of_interest, data_samples, domains, out_dir):
                                          show_consensus=False)
                         # MSA annotation for the contacts in condition 1 and in condition 2
                         df = pd.read_csv(path_common)
-                        annotations_color = "blue"
+                        annotations_color = "dimgrey"
                         df_by_domain = df.loc[df["domain"] == row["domain"]]
                         for _, row_in_domain in df_by_domain.iterrows():
                             if msa_type == "annotated_by_samples_count":
@@ -475,7 +475,7 @@ def plot_msas(aln, region_of_interest, data_samples, domains, out_dir):
 
                         # MSA annotation for the contacts in condition 1 not in condition 2
                         df = pd.read_csv(diff_files[idx])
-                        annotations_color = "red"
+                        annotations_color = "darkmagenta"
                         df_by_domain = df.loc[df["domain"] == row["domain"]]
                         for _, row_in_domain in df_by_domain.iterrows():
                             if msa_type == "annotated_by_samples_count":

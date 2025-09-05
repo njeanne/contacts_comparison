@@ -93,7 +93,7 @@ An example of the different positions between the sequences with insertions and 
   
 
   An example of an annotated MSA by atoms' contacts counts. The numbers of common contacts' positions between the two 
-  conditions are highlighted in <span style="color:blue">blue</span>, and the numbers of different contacts' positions 
-  between the two conditions are highlighted in <span style="color:red">red</span>:
+  conditions are highlighted in <span style="color:grey">grey</span>, and the numbers of different contacts' positions 
+  between the two conditions are highlighted in <span style="color:magenta">magenta</span>:
 
   ![MSA](doc/_static/msa.svg)
