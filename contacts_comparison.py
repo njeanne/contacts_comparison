@@ -7,7 +7,7 @@ Created on 05 Jun. 2024
 __author__ = "Nicolas JEANNE"
 __copyright__ = "GNU General Public License"
 __email__ = "jeanne.n@chu-toulouse.fr"
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 import argparse
 import logging
@@ -159,7 +159,7 @@ def get_domains(domains_file_path, aln, data_whole_positions):
     return df_domains
 
 
-def get_contact_file_paths_by_condition(path, grouped):
+def get_contact_file_paths_by_condition(path, grouped, contact_file_prefix):
     """
     By condition, get the sample names and the contact file paths.
 
@@ -167,13 +167,15 @@ def get_contact_file_paths_by_condition(path, grouped):
     :type path: str
     :param grouped: the grouped conditions.
     :type grouped: list
+    :param contact_file_prefix: the contact file prefix.
+    :type contact_file_prefix: str
     :return: the samples and paths by condition.
     :rtype: dict
     """
     logging.info("get the paths of the contacts files by positions:")
     data = {}
     conditions_paths = pd.read_csv(path, sep=",", header=0)
-    pattern_fn = re.compile("^outliers_(.+)\\.csv")
+    pattern_fn = re.compile(f"^{contact_file_prefix}_(.+)_.+\\.csv")
     for _, row in conditions_paths.iterrows():
         condition = row["condition"]
         if grouped and condition in grouped:
@@ -527,7 +529,11 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--roi", required=True, type=str,
                         help="the region of interest making contacts with other domains.")
     parser.add_argument("-a", "--aln", required=True, type=str,
-                        help="the path to the alignment file (fasta format).")
+                        help="the path to the alignment file (fasta format) of the sequences that we want the show the "
+                             "contacts.")
+    parser.add_argument("-p", "--prefix-contact-files", required=True, type=str,
+                        help="the prefix of the CSV contact files (e.g: \"hydrogen-bonds\", \"neighbors\"...) "
+                             "depending on the type of analysis the contacts files were generated.")
     parser.add_argument("-d", "--domains", required=True, type=str,
                         help="a sample CSV domains annotation file for one of the sequences of the alignment. The file "
                              "name must be <SAMPLE>_domain.csv with <SAMPLE> matching exactly the sequence name in the "
@@ -567,7 +573,7 @@ if __name__ == "__main__":
 
     positions_original_alignment = match_aligned_positions_with_original(msa)
     updated_domains = get_domains(args.domains, msa, positions_original_alignment)
-    conditions_samples_paths = get_contact_file_paths_by_condition(args.input, args.group)
+    conditions_samples_paths = get_contact_file_paths_by_condition(args.input, args.group, args.prefix_contact_files)
     whole_contacts_by_condition = get_whole_contact_positions(conditions_samples_paths, positions_original_alignment)
     compare_contacts_by_condition(whole_contacts_by_condition, args.out, conditions_samples_paths, args.roi)
     plot_msas(msa, args.roi, conditions_samples_paths, updated_domains, args.out)
