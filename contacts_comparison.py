@@ -72,7 +72,7 @@ def match_aligned_positions_with_original(aln):
     :return: the match between the original position and the aligned position.
     :rtype: dict
     """
-    logging.info("get the corresponding positions between the sequences of the alignment and the original ones.")
+    logging.info("Get the corresponding positions between the sequences of the alignment and the original ones.")
     data = {}
     for record in aln:
         data[record.id] = {}
@@ -172,7 +172,7 @@ def get_contact_file_paths_by_condition(path, grouped, contact_file_prefix):
     :return: the samples and paths by condition.
     :rtype: dict
     """
-    logging.info("get the paths of the contacts files by positions:")
+    logging.info("Get the paths of the contacts files by positions:")
     data = {}
     conditions_paths = pd.read_csv(path, sep=",", header=0)
     pattern_fn = re.compile(f"^{contact_file_prefix}_(.+)_.+\\.csv")
@@ -216,7 +216,7 @@ def get_whole_contact_positions(cond_smp_paths, data_whole_positions):
     :return: the whole contact positions.
     :rtype: dict
     """
-    logging.info("get the contacts positions by condition:")
+    logging.info("Get the contacts positions by condition:")
     data = {}
     for condition, smp_and_paths in cond_smp_paths.items():
         data[condition] = {}
@@ -367,7 +367,7 @@ def compare_contacts_by_condition(data_whole_contacts, out_dir, data_files_by_co
     :return: the different and common contacts positions.
     :rtype: dict
     """
-    logging.info("get the different and common positions between the conditions:")
+    logging.info("Get the different and common positions between the conditions:")
     for idx_1 in range(len(data_whole_contacts.keys()) - 1):
         cond_1 = list(data_whole_contacts.keys())[idx_1]
         nb_smp_condition_1 = len(data_files_by_condition[cond_1])
@@ -408,6 +408,21 @@ def subsample_msa(whole_msa, dict_samples, conditions_ids, tmp_directory):
     return path_tmp
 
 
+def msa_legend(out_path):
+    """
+    Create a legend file for the MSAs.
+
+    :param out_path: the legend file path.
+    :type out_path: str
+    """
+    with open(out_path, "w") as legend_file:
+        legend_file.write("The following pattern is the file name the Multiple Sequence Alignment files:\n\n"
+                          "\t\t\t\t\tmsa_<CONDITION 1>_vs_<CONDITION 2>_<DOMAIN>_by_<CONTACT/SAMPLE>_count.svg")
+        legend_file.write("\n\nGrey:\t\t\tcommon contacts to <CONDITION 1> and <CONDITION 2> for <DOMAIN>.")
+        legend_file.write("\nMagenta:\tcontacts in <CONDITION 1> but not in <CONDITION 2> for <DOMAIN>.")
+    logging.info(f"MSA legend file: {out_path}")
+
+
 def plot_msas(aln, region_of_interest, data_samples, domains, out_dir):
     """
     For the conditions 1 and 2, plot 4 Multiple Sequences Alignment (MSA).
@@ -429,7 +444,8 @@ def plot_msas(aln, region_of_interest, data_samples, domains, out_dir):
     :param out_dir: the path to the output directory.
     :type out_dir: str
     """
-    logging.info("plotting the alignments with the contacts annotations:")
+    msa_legend(os.path.abspath(os.path.join(out_dir, "MSA_legend.txt")))
+    logging.info("Plotting the alignments with the contacts annotations:")
     tmp_dir = os.path.join(out_dir, "tmp")
     os.makedirs(tmp_dir, exist_ok=True)
     for versus in os.listdir(out_dir):
@@ -492,7 +508,7 @@ def plot_msas(aln, region_of_interest, data_samples, domains, out_dir):
                             condition_a = condition2
                             condition_b = condition1
                         out = os.path.join(out_dir, versus, f"msa_{msa_type}",
-                                           f"msa_{condition_a}_vs_{condition_b}_{row['domain'].replace(' ', '_')}_"
+                                           f"msa_{condition_a}_vs_{condition_b}_{row['domain'].replace(' ', '-')}_"
                                            f"{msa_type}.svg")
                         msa_viz.savefig(out)
                         logging.info(f"\t\t- {row['domain']} ({condition_a} vs. {condition_b}) alignment plot saved: {out}")
