@@ -187,8 +187,16 @@ def get_contact_file_paths_by_condition(path, grouped, contact_file_prefix):
             if match:
                 sample = match.group(1)
                 data[condition][sample]= os.path.join(row["path"], fn)
+    no_files_for_a_condition = False
     for condition in data:
-        logging.info(f"\t{condition}: {len(data[condition])} files")
+        if len(data[condition]) == 0:
+            logging.error(f"\t{condition}: {len(data[condition])} files")
+            no_files_for_a_condition = True
+        else:
+            logging.info(f"\t{condition}: {len(data[condition])} files")
+    if no_files_for_a_condition:
+        sys.exit(1)
+
     return data
 
 
@@ -222,17 +230,17 @@ def get_whole_contact_positions(cond_smp_paths, data_whole_positions):
         data[condition] = {}
         for smp, contact_path in smp_and_paths.items():
             df = pd.read_csv(contact_path, sep=",", header=0)
-            df = df.sort_values(by=["second partner position"])
+            df = df.sort_values(by=["residue 2 position"])
             for _, row in df.iterrows():
-                position_in_aln = data_whole_positions[smp][row["second partner position"]]["aligned position"]
+                position_in_aln = data_whole_positions[smp][row["residue 2 position"]]["aligned position"]
                 if position_in_aln not in data[condition]:
-                    data[condition][position_in_aln] = {"domain": row["second partner domain"],
+                    data[condition][position_in_aln] = {"domain": row["residue 2 domain"],
                                                         "count": row["number atoms contacts"],
-                                                        "original": {smp: {"position": row["second partner position"]}}}
+                                                        "original": {smp: {"position": row["residue 2 position"]}}}
                 else:
                     if smp not in data[condition][position_in_aln]["original"]:
                         data[condition][position_in_aln]["count"] += row["number atoms contacts"]
-                        data[condition][position_in_aln]["original"][smp] = {"position": row["second partner position"]}
+                        data[condition][position_in_aln]["original"][smp] = {"position": row["residue 2 position"]}
         logging.info(f"\t{condition}: {len(data[condition])} contacts positions.")
     return data
 
