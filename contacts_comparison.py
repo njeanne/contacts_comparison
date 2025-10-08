@@ -195,6 +195,7 @@ def get_contact_file_paths_by_condition(path, grouped, contact_file_prefix):
         else:
             logging.info(f"\t{condition}: {len(data[condition])} files")
     if no_files_for_a_condition:
+        logging.error("Analysis stopped.")
         sys.exit(1)
 
     return data
